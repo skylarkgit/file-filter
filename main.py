@@ -51,17 +51,22 @@ def statusMessage(f):
     else:
         print('folder: ' + f[0])
 
+def getPath(f):
+    if f[1] is not None:
+        _file_src = os.path.join(f[0], f[1])
+    else:
+        _file_src = f[0]
+    return _file_src
+
 def actionOnTarget(f, root_path, _target, _utime):
+    _file_src = getPath(f)
+    _file_target = os.path.join(_target, os.path.relpath(_file_src, root_path) )
     if f[1] is not None:
         is_dir = False
-        _file_src = os.path.join(f[0], f[1])
-        _file_target = os.path.join(_target, os.path.relpath(_file_src, root_path) )
         if copyFile(_file_src, _file_target, _utime, is_dir) is True:
             print('file "' + f[1] + '" in "' + f[0] + '" has been copied to ' + _file_target)
     else:
         is_dir = True
-        _file_src = f[0]
-        _file_target = os.path.join(_target, os.path.relpath(_file_src, root_path) )
         if copyFile(_file_src, _file_target, _utime, is_dir) is True:
             print('folder "' + f[0] + '" has been copied to ' + _file_target)
         else:
@@ -76,10 +81,15 @@ if __name__ == "__main__":
         _min_time = float(sys.argv[2])
         _target = None
         _utime = None
+        fl = []
         if len(sys.argv) == 5:
             _target = sys.argv[3]
             _utime = float(sys.argv[4])
         for f in getFileList(_path, lambda path: timeFilter(path, _min_time)):
+            fl.append(getPath(f))
             statusMessage(f)
             if _target is not None:
                 actionOnTarget(f, _path, _target, _utime)
+
+        with open("output.txt", "w") as outfile:
+            outfile.write("\n".join(fl))
