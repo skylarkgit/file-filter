@@ -15,41 +15,21 @@ def getFileList(path, filter = None):
     for r, d, f in os.walk(path):
         isDirectoryTraversed = False
         if r != path:
-            if filter is not None: 
-                if filter(r):
-                    fArr.append([r, None])
+            try:
+                if filter is None or filter(r): 
+                    fArr.append([r, None, None])
                     isDirectoryTraversed = True
-            else:
-                fArr.append([r, None])
+            except:
+                fArr.append([None, r, None])
                 isDirectoryTraversed = True
         if isDirectoryTraversed is False:
             for i in f:
-                if filter is not None: 
-                    if filter(os.path.join(r,i)):
-                        fArr.append([r, i])
-                else:
-                    fArr.append([r, i])
+                try:
+                    if filter is None or filter(os.path.join(r,i)):
+                        fArr.append([r, i, None])
+                except:
+                    fArr.append([None, r, i])
     return fArr
-
-def copyFile(src, target, utime, is_dir = False):
-    os.makedirs(os.path.dirname(target), exist_ok=True)
-    if is_dir is False:
-        shutil.copyfile(src, target)
-        os.utime(target, (utime, utime))
-        return True
-    else:
-        if os.path.isdir(target) is False:
-            shutil.copytree(src, target)
-            os.utime(target, (utime, utime))
-            return True
-    return False
-
-
-def statusMessage(f):
-    if f[1] is not None:
-        print('file: ' + os.path.join(f[0], f[1]))
-    else:
-        print('folder: ' + f[0])
 
 def getPath(f):
     if f[1] is not None:
@@ -58,38 +38,33 @@ def getPath(f):
         _file_src = f[0]
     return _file_src
 
-def actionOnTarget(f, root_path, _target, _utime):
-    _file_src = getPath(f)
-    _file_target = os.path.join(_target, os.path.relpath(_file_src, root_path) )
-    if f[1] is not None:
-        is_dir = False
-        if copyFile(_file_src, _file_target, _utime, is_dir) is True:
-            print('file "' + f[1] + '" in "' + f[0] + '" has been copied to ' + _file_target)
-    else:
-        is_dir = True
-        if copyFile(_file_src, _file_target, _utime, is_dir) is True:
-            print('folder "' + f[0] + '" has been copied to ' + _file_target)
+def statusMessage(f):
+    if f[0] is None:
+        if len(f) > 2:
+            print('error: file: ' + getPath(f[1:3]))
         else:
-            print('(copy failure): folder "' + f[0] + '" already exists in ' + _file_target)
-    
+            print('error: folder: ' + getPath(f[1:3]))
+    elif f[1] is not None:
+        print('file: ' + os.path.join(f[0], f[1]))
+    else:
+        print('folder: ' + f[0])
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3 or len(sys.argv) == 4 or len(sys.argv) > 5:
-        print('correct usage: python main.py <path> <min_epoch_time_in_sec> [<target> <modified_epoch_time_in_sec>]')
+    if len(sys.argv) < 3:
+        print('correct usage: python main.py <path> <min_epoch_time_in_sec>')
     else:
         _path = sys.argv[1]
         _min_time = float(sys.argv[2])
-        _target = None
-        _utime = None
         fl = []
-        if len(sys.argv) == 5:
-            _target = sys.argv[3]
-            _utime = float(sys.argv[4])
+        efl = []    # error array
         for f in getFileList(_path, lambda path: timeFilter(path, _min_time)):
-            fl.append(getPath(f))
+            if f[0] is not None:
+                fl.append(getPath(f))
+            else:
+                efl.append(getPath(f[1:3]))
             statusMessage(f)
-            if _target is not None:
-                actionOnTarget(f, _path, _target, _utime)
 
         with open("output.txt", "w") as outfile:
             outfile.write("\n".join(fl))
+        with open("error-output.txt", "w") as outfile:
+            outfile.write("\n".join(efl))
